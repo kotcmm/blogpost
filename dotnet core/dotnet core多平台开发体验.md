@@ -150,14 +150,186 @@
 
 到这里我们已经成功的把在mac上面创建的项目拉到win下不改任何代码，然后成功编译运行了。
 
-我们也可以到编译成功的目录 netcoreapp1.0 下面输入命令 dotnet LearnDotnetCore.dll  来运行我们的程序。
+
+#### 发布运行
+
+参考资料：[两种部署方式](http://dotnet.github.io/docs/core-concepts/app-types.html)
+
+上面的开发过程中都是直接在id里面运行的，或者用 dotnet run 来直接运行的，那么我们编译好之后如何脱离IDE来运行呢？
+
+1. 我们也可以到编译成功的目录 netcoreapp1.0 下面输入命令 dotnet LearnDotnetCore.dll  来运行我们的程序。
+2. 可以在project.json加个 runtimes 属性，然后编译出一个exe文件，然后直接运行exe。
 
 `要编译成Release的话，可以用命令 dotnet.exe build --configuration Release --no-dependencies --no-incremental  当然build的命令以后可以有单独的文章来讲解`
 
+第一种编译的配置
+
+    {
+    "version": "1.0.0-*",
+    "buildOptions": {
+        "emitEntryPoint": true
+    },
+    "dependencies": {
+        "Microsoft.NETCore.App": {
+        "type": "platform",
+        "version": "1.0.0-rc2-3002702"
+        }
+    },
+    "frameworks": {
+        "netcoreapp1.0": {
+        "imports": "dnxcore50"
+        }
+    }
+    }
+    
+第二种编译的配置
+
+    {
+    "version": "1.0.0-*",
+    "buildOptions": {
+        "emitEntryPoint": true
+    },
+    "dependencies": {
+        "Microsoft.NETCore.App": {
+        //"type": "platform",
+        "version": "1.0.0-rc2-3002702"
+        }
+    },
+    "frameworks": {
+        "netcoreapp1.0": {
+        "imports": "dnxcore50"
+        }
+    },
+    "runtimes": {
+        "win10-x64": {},
+        "osx.10.11-x64": {}
+    }
+    }
+
+第二种配置使用dotnet publish会把core的支持运行一起打包处理，然后相关的平台就不用安装net core,但是不同平台需要不同编译。具体的效果和目录结构我就不进行截图了，有兴趣的自己编译看看。
 
 ##三、改造成web项目
 
-[两种部署方式](http://dotnet.github.io/docs/core-concepts/app-types.html)
+前面介绍了如何编译和运行控制台的程序，但是在这个互联网的时代，我感觉要做成一个web项目可能会更有趣，我们看看如何直接把前面控制台的项目变成web项目。
+
+参考资料：https://docs.asp.net/en/latest/getting-started.html
+
+####vs修改运行
+
+首先修改配置 project.json，在属性dependencies添加Kestrel依赖。
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527181439631-12509684.png)
+
+第二添加一个类Startup
+
+    using System;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.AspNetCore.Http;
+
+    namespace LearnDotnetCore
+    {
+        public class Startup
+        {
+            public void Configure(IApplicationBuilder app)
+            {
+                app.Run(context =>
+                {
+                    return context.Response.WriteAsync("Hello from ASP.NET Core!");
+                });
+            }
+        }
+    }
+
+然后修改Program.cs
+
+    using System;
+    using Microsoft.AspNetCore.Hosting;
+
+    namespace LearnDotnetCore
+    {
+        public class Program
+        {
+            public static void Main(string[] args)
+            {
+                var host = new WebHostBuilder()
+                    .UseKestrel()
+                    .UseStartup<Startup>()
+                    .Build();
+
+                host.Run();
+            }
+        }
+    }
+
+然后点击运行按钮，程序成功的运行起来
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527191849069-618253433.png)
+
+打开浏览器访问 http://localhost:5000/ 我们可以看到浏览器打印出 Hello from ASP.NET Core!证明我们的程序已经编译并运行成功。
+
+####发布并部署iis
+
+虽然说直接运行可以访问成功，但是有的人就是喜欢部署到IIS上面去，所以这里也尝试一下部署到IIS上面是什么样的。
+
+参考资料：https://docs.asp.net/en/latest/publishing/iis.html
+
+安装完IIS后需要安装 [DotNetCore.1.0.0.RC2-WindowsHosting](http://go.microsoft.com/fwlink/?LinkId=798480)来支持 net core 在iis上面运行
+
+然后修改project.json的内容,添加下面三个东西，来支持iis运行
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527202115913-1198565477.png)
+
+然后修改Program.cs,添加iis支持
+
+    using System;
+    using System.IO;
+    using Microsoft.AspNetCore.Hosting;
+
+    namespace LearnDotnetCore
+    {
+        public class Program
+        {
+            public static void Main(string[] args)
+            {
+                var host = new WebHostBuilder()
+                    .UseKestrel()
+                    
+                    .UseContentRoot(Directory.GetCurrentDirectory())
+                    .UseIISIntegration()
+                    
+                    .UseStartup<Startup>()
+                    .Build();
+
+                host.Run();
+            }
+        }
+    }
+
+添加文件 web.config
+
+    <?xml version="1.0" encoding="utf-8"?>
+    <configuration>
+
+    <!--
+        Configure your application settings in appsettings.json. Learn more at http://go.microsoft.com/fwlink/?LinkId=786380
+    -->
+
+    <system.webServer>
+        <handlers>
+        <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModule" resourceType="Unspecified"/>
+        </handlers>
+        <aspNetCore processPath="%LAUNCHER_PATH%" arguments="%LAUNCHER_ARGS%" stdoutLogEnabled="false" stdoutLogFile=".\logs\stdout" forwardWindowsAuthToken="false"/>
+    </system.webServer>
+    </configuration>
+
+上面三个修改完之后，就可以来发布，选择项目邮件，然后选择发布会出现一个窗口
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527203320663-1112836804.png)
+
+输入名称，然后next或者直接publish，操作完成后会生成一堆文件。然后到iis里面创建 Web 站点，然后绑定发布目录就行，应用程序池的模式需要改为“无代码托管”。
+
+启动网站运行后，浏览器输入http://localhost/ 可以看到浏览器打印出 Hello from ASP.NET Core!和上面没有在iis里面运行的效果是一样的。
 
 ##四、申请vps并上传项目运行
 
