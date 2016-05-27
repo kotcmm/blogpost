@@ -2,9 +2,16 @@
 
 随着net core rc2的发布，园子里面关于net core的入门文章也也多了起来，但是大多数都是在一个平台上面来写几个简单的例子，或者是在解释代码本身，并没有体现说在一个平台上面创建一个项目，然后通过源码管理签出到另一个平台上继续开发。还有就是一次编译到处运行是如何体现的？这样类型的文章好像还没有在哪里看到过，于是我就想自己来一遍，并把这个过程分享出来给大家。
 
+首先来个官方的介绍：
+
+[.NET Core - .NET 使用 .NET Core 跨平台运行](https://msdn.microsoft.com/zh-cn/magazine/mt694084.aspx)
+
+[Announcing .NET Core RC2 and .NET Core SDK Preview 1](https://blogs.msdn.microsoft.com/dotnet/2016/05/16/announcing-net-core-rc2/)
+
+
 ## 一、mac os x 上的开发
 
-本来环境安装是不想写的，因为有太多的文章，但是感觉不写的话又感觉少了些什么。然后我只有一个mac和一个安装win10的pc，所以就只针对这两个平台来，linux等我有钱买新电脑再来折腾。废话不多说，下面开始介绍。
+本来环境安装是不想写的，因为有太多的文章，但是不写的话又感觉少了些什么。然后我只有一个mac和一个安装win10的pc，所以就只针对这两个平台来，linux等我有钱买新电脑再来折腾。废话不多说，下面开始介绍。
 
 ####mac os x环境下 dotnet core 的安装
 
@@ -113,7 +120,44 @@
 
 ##二、window 上的开发
 
+切到win10上面来继续完成这个博文。
+
+####开发环境的安装
+
+参考资料：https://www.microsoft.com/net/core#windows
+
+首先要先下载下面的工具：
+
+[Visual Studio Community 2015](https://www.visualstudio.com/products/visual-studio-community-vs)
+
+[DotNetCore.1.0.0.RC2-VS2015Tools.Preview1](https://go.microsoft.com/fwlink/?LinkId=798481)
+
+这两个软件的安装就不需要截图了，先安装Visual Studio Community 2015再安装DotNetCore.1.0.0.RC2-VS2015Tools.Preview1。安装完之后我们打开vs 2015，然后把我们之前在mac上面创建的项目给下载下来。
+
+打vs后我们选择 open from source control 然后出现左边的面板，如果没有登录你的github账号，那么就先登录你的账号，然后再点击Clone出现一个窗口选择我们前面上传的那个项目。
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527131940741-1680327735.png)
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527133430913-124986553.png)
+
+下载完后双击我们的git项目，然后在弹出的窗口里面选择project.json，就会生成左边的那样项目工程了。
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527133501006-59647658.png)
+
+然后我们编译成功并运行起来。
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160527133714834-922331963.png)
+
+到这里我们已经成功的把在mac上面创建的项目拉到win下不改任何代码，然后成功编译运行了。
+
+我们也可以到编译成功的目录 netcoreapp1.0 下面输入命令 dotnet LearnDotnetCore.dll  来运行我们的程序。
+
+`要编译成Release的话，可以用命令 dotnet.exe build --configuration Release --no-dependencies --no-incremental  当然build的命令以后可以有单独的文章来讲解`
+
+
 ##三、改造成web项目
+
+[两种部署方式](http://dotnet.github.io/docs/core-concepts/app-types.html)
 
 ##四、申请vps并上传项目运行
 
