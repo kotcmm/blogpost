@@ -160,7 +160,7 @@
 1. 我们也可以到编译成功的目录 netcoreapp1.0 下面输入命令 dotnet LearnDotnetCore.dll  来运行我们的程序。
 2. 可以在project.json加个 runtimes 属性，然后编译出一个exe文件，然后直接运行exe。
 
-`要编译成Release的话，可以用命令 dotnet.exe build --configuration Release --no-dependencies --no-incremental  当然build的命令以后可以有单独的文章来讲解`
+`要编译成Release的话，可以用命令 dotnet build --configuration Release --no-dependencies --no-incremental  当然build的命令以后可以有单独的文章来讲解`
 
 第一种编译的配置
 
@@ -332,7 +332,98 @@
 启动网站运行后，浏览器输入http://localhost/ 可以看到浏览器打印出 Hello from ASP.NET Core!和上面没有在iis里面运行的效果是一样的。
 
 ##四、申请vps并上传项目运行
+在文章开头说了，没有Linux的系统，但是后来想了一下，还是也体验一下看看，于是就去 [host1plus](https://affiliates.host1plus.com/affiliates/signup.php?a_aid=kotcmm) 买了一个vps，一个是可以体验一下发布一个net core 做的网站，另一个就是以后还可以放一些运行示例什么的。
 
+我买的vps安装的是centos-7系统，可以使用ssh远程登录上去管理。先给安装一个 net core 的运行环境。
+
+参考资料：https://www.microsoft.com/net/core#centos
+
+输入安装命令：
+>curl -sSL https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0-preview1/scripts/obtain/dotnet-install.sh | bash /dev/stdin --version 1.0.0-preview1-002702 --install-dir ~/dotnet
+
+结果返回了错误。
+
+`dotnet_install: Error: Unable to locate libunwind. Install libunwind to continue`
+
+`dotnet_install: Error: Unable to locate libicu. Install libicu to continue`
+
+`dotnet_install: Error: Unable to locate gettext. Install gettext to continue`
+
+看起来是缺少了几个玩意，那好吧先来下载安装,使用yum命令来安装
+
+>yum install libunwind
+
+>yum install libicu
+
+>yum install gettext
+
+重新输入安装命令：
+>curl -sSL https://raw.githubusercontent.com/dotnet/cli/rel/1.0.0-preview1/scripts/obtain/dotnet-install.sh | bash /dev/stdin --version 1.0.0-preview1-002702 --install-dir ~/dotnet
+
+这次返回的信息是
+
+`dotnet-install: Downloading https://dotnetcli.blob.core.windows.net/dotnet/beta/Binaries/1.0.0-preview1-002702/dotnet-dev-centos-x64.1.0.0-preview1-002702.tar.gz`
+
+>dotnet-install: Extracting zip
+
+>dotnet-install: Adding to current process PATH: /root/dotnet. Note: This change will be visible only when sourcing script.
+
+>dotnet-install: Installation finished successfuly.
+
+然后再输入命令
+
+>sudo ln -s ~/dotnet/dotnet /usr/local/bin
+
+*说明：ln是linux中又一个非常重要命令，它的功能是为某一个文件在另外一个位置建立一个同步的链接.当我们需要在不同的目录，用到相同的文件时，我们不需要在每一个需要的目录下都放一个必须相同的文件，我们只要在某个固定的目录，放上该文件，然后在 其它的目录下用ln命令链接（link）它就可以，不必重复的占用磁盘空间。*
+
+然后我们再来输入 dotnet 命令看看是否真的安装成功了。安装成功之后我们就要把之前编译发布好的文件给上传到vps上面去。（记住是要上传 dotnet publish发布出来的那些文件）
+
+可以使用scp命令来上传，命令参考：http://www.cnblogs.com/peida/archive/2013/03/15/2960802.html
+
+文件上传成功后我们执行  dotnet LearnDotnetCore.dll 命令来运行我们的网站程序。返回一下信息
+
+    Hosting environment: Production
+    Content root path: /root/www/publish
+    Now listening on: http://localhost:5000
+    Application started. Press Ctrl+C to shut down.
+
+说明我们的程序已经成功运行起来，然后我们打开浏览器访问我们的vps地址，发现并没打印出信息。那是因为程序默认绑定的是http://localhost:5000， 所以我们访问ip的是访问不到，那有两种办法可以实现我们使用ip访问，第一种修改程序添加绑定例如下面:
+
+        public static void Main(string[] args)
+        {
+            var host = new WebHostBuilder()
+                .UseKestrel()
+                .UseContentRoot(Directory.GetCurrentDirectory())
+                .UseIISIntegration()
+                .UseUrls("http://192.168.0.102:5000")
+                .UseStartup<Startup>()
+                .Build();
+
+            host.Run();
+        }
+        
+第二种可以使用代理，我这里选择Nginx。安装参考资料：https://www.digitalocean.com/community/tutorials/how-to-install-nginx-on-centos-7
+
+由于没有玩过Linux所以经过几番波折啊，首先80端口被Apache http占用启动不了,然后防火墙阻止了80端口。最后终于成功的看到了这个页面
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160528104156991-1500990367.png)
+
+然后配置代理，找到Nginx里面的配置把`location /`改成如下
+
+    location / {
+
+      # 传递真实IP到后端
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+      proxy_pass   localhost:5000;
+   }
+
+保存后，重启一下Nginx，然后再运行我们前面上传上去的net core网站，再打开浏览访问我们vps的地址，浏览器打印出了 Hello from ASP.NET Core! 
+
+![](http://images2015.cnblogs.com/blog/248834/201605/248834-20160528111621600-1566064840.png)
+
+到这我们已经体验完成了net core 在 macosx、windows、linux三个平台下的开发和部署运行的过程。本文结束，谢谢观看。
 
 --------------------
 由于本人水平有限，知识有限，文章难免会有错误，欢迎大家指正。如果有什么问题也欢迎大家回复交流。要是你觉得本文还可以，那么点击一下推荐。
